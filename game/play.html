@@ -121,6 +121,8 @@ body>iframe[style]{
   touch-action:none;
 }
 #minimapCanvas{display:block;width:96px !important;height:96px !important;}
+#quick-chat-wheel{display:none !important;position:fixed;width:200px;height:200px;}
+#quick-chat-wheel.qcw-open{display:block !important;}
 
 /* ===== TOP BAR ===== */
 #ui-top{
@@ -2327,12 +2329,12 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
 </div>
 
 <!-- QUICK CHAT WHEEL -->
-<div id="quick-chat-wheel" style="display:none;position:fixed;z-index:750;pointer-events:auto;touch-action:none">
-  <svg id="qcw-svg" width="200" height="200" style="position:absolute;left:-100px;top:-100px;pointer-events:none">
+<div id="quick-chat-wheel" style="display:none;position:fixed;z-index:750;pointer-events:none;touch-action:none">
+  <svg id="qcw-svg" width="200" height="200" style="position:absolute;left:0;top:0;pointer-events:none">
     <circle cx="100" cy="100" r="90" fill="rgba(0,0,0,0.7)" stroke="rgba(100,200,50,0.5)" stroke-width="2"/>
   </svg>
-  <div id="qcw-items" style="position:absolute;left:-100px;top:-100px;width:200px;height:200px"></div>
-  <button type="button" id="qcw-close" onclick="closeQuickChat()" aria-label="Emoji panelini kapat" title="Kapat" style="position:absolute;left:-20px;top:-20px;width:40px;height:40px;border:2px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(25,25,25,.92);color:#fff;font-size:22px;line-height:1;cursor:pointer;pointer-events:auto">×</button>
+  <div id="qcw-items" style="position:absolute;left:0;top:0;width:200px;height:200px"></div>
+  <button type="button" id="qcw-close" onclick="closeQuickChat()" aria-label="Emoji panelini kapat" title="Kapat" style="position:absolute;left:80px;top:80px;width:40px;height:40px;border:2px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(25,25,25,.92);color:#fff;font-size:22px;line-height:1;cursor:pointer;pointer-events:auto">×</button>
 </div>
 
 <!-- MINIMAP — below the resource counter -->
@@ -4759,8 +4761,10 @@ function openQuickChat(mx, my) {
   const svg = document.getElementById('qcw-svg');
   if (!wheel || !items) return;
   wheel.style.display = 'block';
-  wheel.style.left = mx + 'px';
-  wheel.style.top = my + 'px';
+  wheel.classList.add('qcw-open');
+  wheel.style.pointerEvents = 'auto';
+  wheel.style.left = Math.max(4, Math.min(window.innerWidth - 204, mx - 100)) + 'px';
+  wheel.style.top = Math.max(4, Math.min(window.innerHeight - 204, my - 100)) + 'px';
   items.innerHTML = '';
   QUICK_CHATS.forEach((c, i) => {
     const angle = (i / QUICK_CHATS.length) * Math.PI * 2 - Math.PI / 2;
@@ -4776,7 +4780,6 @@ function openQuickChat(mx, my) {
     div.onclick = () => { sendQuickChat(i); closeQuickChat(); };
     items.appendChild(div);
   });
-  wheel.style.pointerEvents = 'auto';
 }
 
 function toggleQuickChat() {
@@ -4787,7 +4790,13 @@ function toggleQuickChat() {
 function closeQuickChat() {
   _qcwOpen = false;
   const wheel = document.getElementById('quick-chat-wheel');
-  if (wheel) { wheel.style.display = 'none'; wheel.style.pointerEvents = 'none'; }
+  if (wheel) {
+    wheel.classList.remove('qcw-open');
+    wheel.style.display = 'none';
+    wheel.style.pointerEvents = 'none';
+    wheel.style.left = '-1000px';
+    wheel.style.top = '-1000px';
+  }
 }
 
 function sendQuickChat(idx) {
@@ -14453,6 +14462,8 @@ window.addEventListener('keydown', e => {
   }
 
   if (e.key === 'Escape') {
+    if (_qcwOpen) { closeQuickChat(); return; }
+    if (_tabOpen) { closeTabScoreboard(); return; }
     const pnl = document.getElementById('snap-settings-panel');
     if (pnl && pnl.classList.contains('open')) _toggleSnapSettings();
     else window.location.href = _BASE;
