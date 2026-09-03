@@ -1538,6 +1538,7 @@ html.touch-device .joy-zone { display:flex !important; pointer-events:auto !impo
 .tmh-badge.league-efsane{border-color:rgba(255,170,0,0.7);background:rgba(68,18,0,0.9);animation:tmh-glow 2s infinite;}
 @keyframes tmh-glow{0%,100%{box-shadow:0 0 6px rgba(255,170,0,0.3);}50%{box-shadow:0 0 16px rgba(255,170,0,0.7);}}
 #cave-prompt{position:fixed;bottom:158px;left:50%;transform:translateX(-50%);z-index:1200;background:rgba(8,4,18,0.95);border:2px solid rgba(150,80,240,0.75);border-radius:14px;padding:12px 24px;color:#ddc8ff;font-size:14px;font-weight:800;display:none;text-align:center;pointer-events:auto;cursor:pointer;box-shadow:0 0 24px rgba(120,0,220,0.45);user-select:none;-webkit-user-select:none;touch-action:manipulation;min-width:160px;min-height:44px;}
+#cave-prompt{display:none !important;}
 #cave-prompt.show{display:block;animation:cave-pulse 1.5s infinite;}
 #cave-prompt:active{transform:translateX(-50%) scale(0.95);}
 @keyframes cave-pulse{0%,100%{box-shadow:0 0 24px rgba(120,0,220,0.45);}50%{box-shadow:0 0 40px rgba(120,0,220,0.8);}}
@@ -11075,7 +11076,18 @@ function drawEnemy(e) {
     _mobDrawn = false;
   }
   if (!_mobDrawn) {
-    drawMobShape(ctx, R, e.color, e.outline, e.eyes, shape, globalTime, e);
+    try {
+      drawMobShape(ctx, R, e.color, e.outline, e.eyes, shape, globalTime, e);
+    } catch (_shapeErr) {
+      ctx.save();
+      ctx.fillStyle = e.color || '#6b4932';
+      ctx.strokeStyle = e.outline || '#28170d';
+      ctx.lineWidth = Math.max(2, R * 0.08);
+      ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = e.eyes || '#ffcc66';
+      ctx.beginPath(); ctx.arc(R * 0.3, -R * 0.18, Math.max(3, R * 0.1), 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
   }
 
   ctx.restore();
@@ -17886,13 +17898,14 @@ window._openAchPanel=function(){
 };
 
 // ── 5. GİZLİ MAĞARALAR ──────────────────────────────────────
-var CAVES=[
+var CAVES=[];
+/*
   {id:'forest', x:1400,  y:-600,  name:'Orman Mağarası',   col:'#2a6e12'},
   {id:'snow',   x:300,   y:-3500, name:'Kar Mağarası',     col:'#4488bb'},
   {id:'desert', x:3500,  y:200,   name:'Çöl Mağarası',     col:'#b87a20'},
   {id:'dark',   x:-3500, y:200,   name:'Karanlık Mağara',  col:'#662299'},
   {id:'swamp',  x:200,   y:3500,  name:'Bataklık Mağarası',col:'#3a6e22'},
-];
+];*/
 var _caveNearIdx=-1;
 var _caveCooldown={};
 var _caveVisited=parseInt(localStorage.getItem('fb_caves_visited')||'0',10);
@@ -18249,9 +18262,10 @@ var _MM_CAMPS_EXT=[
   {bx:-3200, by:-1000, col:'#aa22ff',tid:'dark'  },
   {bx:-800,  by:3200,  col:'#44aa22',tid:'swamp' },
 ];
-var _MM_CAVES_EXT=[
+var _MM_CAVES_EXT=[];
+/*
   {x:1400,y:-600},{x:300,y:-3500},{x:3500,y:200},{x:-3500,y:200},{x:200,y:3500}
-];
+];*/
 // PERF: Cave positions are static — pre-compute minimap pixel coords and cache gradient.
 // Without cache: createRadialGradient × N_caves per 450ms call → GC + GPU work.
 var _mmCaveCache = null; // lazy-built once when _mmOvCtx is ready
