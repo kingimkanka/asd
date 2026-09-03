@@ -2661,7 +2661,7 @@
 
             setTimeout(() => {
                 const clanId = localStorage.getItem('fb_clan_id') || '';
-                window.location.href = `play.html?name=${encodeURIComponent(name)}&skin=${encodeURIComponent(_currentSkin)}${clanId ? '&clanId=' + encodeURIComponent(clanId) : ''}&mode=online`;
+                window.location.href = `play.html?name=${encodeURIComponent(name)}&skin=${encodeURIComponent(_currentSkin)}&wepSkin=${encodeURIComponent(_equippedWeapon)}${clanId ? '&clanId=' + encodeURIComponent(clanId) : ''}&mode=online`;
             }, 300);
         }
 
