@@ -76,7 +76,7 @@ const dataFile = process.env.DATA_FILE || path.join(__dirname, 'forest-data.json
 const authSecret = process.env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 if (!process.env.AUTH_SECRET) console.warn('[Security] AUTH_SECRET is not set; tokens will reset after restart.');
 const allowedOrigins = new Set((process.env.ALLOWED_ORIGINS || 'https://forestbrawl.fun,https://www.forestbrawl.fun,http://localhost:3000').split(',').map(origin => origin.trim()).filter(Boolean));
-let worldSeed = Math.floor(Math.random() * 0x7fffffff);
+const worldSeed = 0x4F524553;
 let nextMobId = 1;
 const airdrops = new Map();
 let nextAirdropId = 1;
