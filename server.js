@@ -1136,10 +1136,37 @@ function deletePlayerBuildings(playerId) {
     }
     for (const p of players.values()) {
       if (p.trappedBy && deletedIds.includes(p.trappedBy)) {
+        const trapId = p.trappedBy;
         p.trappedBy = null;
+        p.trappedX = null;
+        p.trappedY = null;
+        p.trappedUntil = 0;
+        p.vx = 0;
+        p.vy = 0;
+        io.to(p.id).emit('trap_freed', { buildingId: trapId });
       }
     }
   }
+}
+
+function releaseTrapVictim(playerId, trapId = null) {
+  const target = players.get(playerId);
+  if (!target || !target.trappedBy) return false;
+  const activeTrapId = trapId ?? target.trappedBy;
+  if (!activeTrapId || (trapId && target.trappedBy !== trapId)) return false;
+  const trap = buildings.get(activeTrapId);
+  const ownerId = trap?.ownerId || null;
+  target.trappedBy = null;
+  target.trappedX = null;
+  target.trappedY = null;
+  target.trappedUntil = 0;
+  target.vx = 0;
+  target.vy = 0;
+  io.to(playerId).emit('trap_freed', { buildingId: activeTrapId });
+  if (ownerId) {
+    io.to(ownerId).emit('trap_victim_freed', { victimId: playerId, buildingId: activeTrapId });
+  }
+  return true;
 }
 
 function broadcastMobIds() {
@@ -1345,6 +1372,17 @@ setInterval(() => {
 }, 1000);
 
 setInterval(broadcastMobIds, 2000);
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [playerId, player] of players) {
+    if (!player || !player.trappedBy) continue;
+    const trap = buildings.get(player.trappedBy);
+    if (!trap || (trap.hp ?? 0) <= 0 || now >= (player.trappedUntil || 0)) {
+      releaseTrapVictim(playerId, player.trappedBy);
+    }
+  }
+}, 250);
 
 // Realtime leaderboard & bounty updates every 2s
 setInterval(() => {
