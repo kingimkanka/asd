@@ -9112,8 +9112,17 @@ function _drawUltraGold(ctx, x, y, R, biome, t) {
 }
 
 function _drawUltraAppleTree(ctx,x,y,R,t,hp){
-  _drawUltraTree(ctx,x,y,R,'forest',t,hp);
-  
+  const prevQuality = typeof _qualityLevel === 'number' ? _qualityLevel : 2;
+  // Fruit trees must never visually degrade regardless of device/FPS quality tier.
+  if (prevQuality !== 2) {
+    _qualityLevel = 2;
+  }
+  try {
+    _drawUltraTree(ctx,x,y,R,'forest',t,hp);
+  } finally {
+    _qualityLevel = prevQuality;
+  }
+
   ctx.save();ctx.translate(x,y);
   ctx.rotate(Math.sin(t*.018+x*.003)*.04);
   const applePos=[[-R*.28,-R*.48],[R*.12,-R*.58],[-R*.04,-R*.28],[R*.26,-R*.35],[-R*.36,-R*.22],[R*.04,-R*.72]];
@@ -9281,7 +9290,7 @@ function _drawUltraHive(ctx,x,y,R,t){
 // Bake procedural resources once (moomoo/sploop style) — blit instead of 20+ path ops per tree per frame.
 const _resBakeCache = new Map();
 function _getBakedResource(type, biome, R) {
-  const q = _qualityLevel >= 2 ? 2 : 1;
+  const q = type === 'apple' ? 2 : (_qualityLevel >= 2 ? 2 : 1);
   const key = type + '|' + (biome || '') + '|' + (R | 0) + '|' + q;
   let baked = _resBakeCache.get(key);
   if (baked) return baked;
