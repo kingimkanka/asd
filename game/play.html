@@ -2772,6 +2772,7 @@ var _nowMs              = 0;     // Date.now() cached per frame — avoid N call
 var _shadowOk           = true;  // quality >= 1 — gate medium-cost shadow effects
 var _glowOk             = true;  // quality >= 2 — gate expensive bloom/glow effects
 var _trapCaughtBy       = null, _trapCaughtX = undefined, _trapCaughtY = undefined;
+var _trapPendingId      = null, _trapPendingUntil = 0;
 var _myTrapVictims      = new Map();
 var _spikeEnemyCooldowns= new Map();
 var _pvpPredictTime     = new Map();
@@ -13556,13 +13557,10 @@ function update(timestamp = 0) {
       const tdx = player.x - b.x, tdy = player.y - b.y;
       const trapTriggerR = (b.radius || 52) + player.radius * 0.75;
       if (tdx * tdx + tdy * tdy <= trapTriggerR * trapTriggerR) {
-        _trapCaughtBy = b._netId || b.id || b._bLid;
-        _trapCaughtX = player.x;
-        _trapCaughtY = player.y;
-        player.vx = 0; player.vy = 0;
-        player.momX = 0; player.momY = 0;
-        playSound(140, 0.2, 'sawtooth', 0.35);
-        if (_connected && _socket && b._netId) {
+        const trapId = b._netId || b.id || b._bLid;
+        if (_connected && _socket && b._netId && (_trapPendingId !== trapId || Date.now() >= _trapPendingUntil)) {
+          _trapPendingId = trapId;
+          _trapPendingUntil = Date.now() + 1200;
           _socket.emit('trap_touch', { victimId: _mySocketId, buildingId: b._netId });
         }
         break;
@@ -15441,17 +15439,25 @@ function initMultiplayer() {
   });
 
   // Trap caught — server froze us in a trap
-  _socket.on('trap_caught', ({ buildingId }) => {
+  _socket.on('trap_caught', ({ buildingId, x, y }) => {
     if (!player || player.dead) return;
+    _trapPendingId = null;
+    _trapPendingUntil = 0;
     _trapCaughtBy = buildingId;
-    _trapCaughtX = player.x;
-    _trapCaughtY = player.y;
+    _trapCaughtX = Number.isFinite(Number(x)) ? Number(x) : player.x;
+    _trapCaughtY = Number.isFinite(Number(y)) ? Number(y) : player.y;
+    player.x = _trapCaughtX;
+    player.y = _trapCaughtY;
     player.vx = 0; player.vy = 0; player.momX = 0; player.momY = 0;
     playSound(180, 0.18, 'sawtooth', 0.35);
   });
 
   // Trap freed — trap was destroyed or owner left
   _socket.on('trap_freed', ({ buildingId } = {}) => {
+    if (!buildingId || _trapPendingId === buildingId) {
+      _trapPendingId = null;
+      _trapPendingUntil = 0;
+    }
     if (!buildingId || _trapCaughtBy === buildingId) {
       _clearTrapLock();
       playSound(320, 0.12, 'sine', 0.22);

@@ -1716,14 +1716,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('trap_touch', (data = {}) => {
-    const owner = players.get(socket.id);
     const target = players.get(data.victimId);
     const building = buildings.get(String(data.buildingId || ''));
     if (!target || target.hp <= 0) return;
     if (!building || building.type !== 6 || (building.hp ?? 0) <= 0) return;
     if (building.ownerId === data.victimId) return;
     if (building.ownerId !== socket.id && data.victimId !== socket.id) return;
-    if (owner && ((owner.clanId && owner.clanId === target.clanId) || (owner.team && target.team && owner.team === target.team))) return;
+    const trapOwner = players.get(building.ownerId);
+    if (trapOwner && ((trapOwner.clanId && trapOwner.clanId === target.clanId) || (trapOwner.team && target.team && trapOwner.team === target.team))) return;
+    const dx = (Number(target.x) || 0) - (Number(building.x) || 0);
+    const dy = (Number(target.y) || 0) - (Number(building.y) || 0);
+    const triggerRadius = (Number(building.radius) || 78) + 35;
+    if (dx * dx + dy * dy > triggerRadius * triggerRadius) return;
     target.trappedBy = building.id;
     target.trappedX = target.x;
     target.trappedY = target.y;
