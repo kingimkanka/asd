@@ -957,7 +957,7 @@ function nearbyServerObstacles(x, y, radius) {
     const x = (rng() * 2 - 1) * r;
     const y = (rng() * 2 - 1) * r;
     const typeRoll = rng();
-    const radius = (typeRoll < 0.45 ? 42 : typeRoll < 0.75 ? 38 : 32) * 0.72;
+    const radius = typeRoll < 0.45 ? 145 : typeRoll < 0.75 ? 125 : 88;
     const obstacle = { x, y, radius };
     serverObstacles.push(obstacle);
     const key = obstacleCellKey(x, y);
