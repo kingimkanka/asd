@@ -1785,6 +1785,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat', (data = {}) => io.emit('chat', { name: players.get(socket.id)?.name || 'Oyuncu', msg: String(data.msg || '').slice(0, 200), id: socket.id }));
+  socket.on('quick_chat', (data = {}) => {
+    const player = players.get(socket.id);
+    const idx = Number(data.idx);
+    if (!player || !Number.isInteger(idx) || idx < 0 || idx >= 8) return;
+    io.emit('quick_chat', {
+      id: socket.id,
+      name: player.name || 'Oyuncu',
+      idx,
+      x: Number(player.x) || 0,
+      y: Number(player.y) || 0,
+      at: Date.now()
+    });
+  });
   socket.on('ping_req', (data) => socket.emit('pong_res', typeof data === 'object' && data ? data : { t: data }));
   socket.on('player_dead', (data = {}) => {
     const pid = data.id || socket.id;

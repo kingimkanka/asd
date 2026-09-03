@@ -4803,6 +4803,7 @@ function closeQuickChat() {
 function sendQuickChat(idx) {
   const c = QUICK_CHATS[idx];
   if (!c) return;
+  if (_connected && _socket) _socket.emit('quick_chat', { idx });
   // Show as floating text above player
   floatingTexts.push({ x: player.x, y: player.y - 120, text: c.emoji + ' ' + c.text, alpha: 1, life: 120, color: '#ffffff', big: true });
   // Also show in chat feed
@@ -14788,6 +14789,7 @@ function initMultiplayer() {
         name: s.n || s.name || '?', skin: s.sk || s.skin || 'default',
         x: s.x ?? 0, y: s.y ?? 0, angle: s.a ?? s.angle ?? 0,
         hp: s.hp ?? 100, maxHp: s.mhp ?? s.maxHp ?? 100,
+        attackTimer: s.atp ?? s.attackTimer ?? 0, attackDuration: s.atd ?? s.attackDuration ?? 0,
         weapon: s.w ?? s.weapon ?? 1, isAttacking: s.atk ?? s.isAttacking ?? false,
         kills: s.k ?? s.kills ?? 0, xp: s.xp ?? 0, gold: s.g ?? s.gold ?? 0, score: s.sc ?? s.score ?? 0,
         axeTier: s.at ?? s.axeTier ?? 0, swordTier: s.st ?? s.swordTier ?? 0,
@@ -15518,6 +15520,22 @@ function initMultiplayer() {
       if (op) { op._chatMsg = msg; op._chatExpiry = Date.now() + 4500; }
     }
     pushKillFeed(`💬 ${name}: ${msg}`);
+  });
+
+  _socket.on('quick_chat', ({ name, id, idx, x, y }) => {
+    const chat = QUICK_CHATS[Number(idx)];
+    if (!chat || id === _mySocketId) return;
+    const op = _otherPlayers.get(id);
+    const chatX = Number.isFinite(Number(x)) ? Number(x) : op?.x;
+    const chatY = Number.isFinite(Number(y)) ? Number(y) : op?.y;
+    if (!Number.isFinite(chatX) || !Number.isFinite(chatY)) return;
+    if (op) {
+      op._chatMsg = chat.emoji + ' ' + chat.text;
+      op._chatExpiry = Date.now() + 4500;
+    }
+    floatingTexts.push({ x: chatX, y: chatY - 120, text: chat.emoji + ' ' + chat.text, alpha: 1, life: 120, color: '#ffffff', big: true });
+    addKillFeed('💬 ' + (name || op?.name || 'Oyuncu') + ': ' + chat.text, '#aaffaa');
+    playSound(440, 0.06, 'sine', 0.15);
   });
 
   // ── Resource sync: server broadcast a resource HP update ─────────────
