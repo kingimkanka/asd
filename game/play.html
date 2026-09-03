@@ -1812,6 +1812,7 @@ html.touch-device .joy-zone { display:flex !important; pointer-events:auto !impo
 @media (max-width:480px){
   #ui-top{left:max(env(safe-area-inset-left,0px),5px);top:max(env(safe-area-inset-top,0px),5px);}
   #ui-top > div:last-child{gap:2px;}.ref-hud-btn{display:none !important;}
+  #scoreboard-btn,#chat-wheel-btn{display:grid !important;}
   #ui-top button{width:29px;height:29px;font-size:14px;}
   #resource-hud{gap:2px;padding:3px;}.res-item{min-width:0;padding:2px 3px;}.res-icon,.res-icon img,.res-icon svg{width:13px;height:13px;}.res-value{font-size:9px;}
   #lb-panel{right:5px;top:40px;width:148px;padding:5px;}.lb-row{font-size:9px;padding:2px;}.lb-score{font-size:9px;}.lb-title{font-size:9px;}
@@ -1974,8 +1975,8 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
   <div style="flex:1;"></div>
   <div style="display:flex;gap:6px;pointer-events:auto;align-items:center;">
     <button type="button" class="ref-hud-btn" onclick="_toggleSnapSettings(event)" title="Savunma ayarları" aria-label="Savunma ayarları">🛡</button>
-    <button type="button" class="ref-hud-btn" onclick="openTabScoreboard()" title="Skor tablosu" aria-label="Skor tablosu">⚔</button>
-    <button type="button" class="ref-hud-btn" onclick="openQuickChat(window.innerWidth / 2, window.innerHeight / 2)" title="Hızlı sohbet" aria-label="Hızlı sohbet">✋</button>
+    <button type="button" id="scoreboard-btn" class="ref-hud-btn" onclick="toggleTabScoreboard()" title="Skor tablosu" aria-label="Skor tablosu">⚔</button>
+    <button type="button" id="chat-wheel-btn" class="ref-hud-btn" onclick="openQuickChat(window.innerWidth / 2, window.innerHeight / 2)" title="Hızlı sohbet" aria-label="Hızlı sohbet">✋</button>
     <button type="button" id="settings-btn" title="Ayarlar">⚙️</button>
     <button id="fs-btn" onclick="tryFullscreen()" title="Tam Ekran">⛶</button>
     <button id="back-btn" onclick="_goToMenu()">← Menü</button>
@@ -2317,7 +2318,7 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
 <div id="kill-feed"></div>
 
 <!-- TAB SCOREBOARD OVERLAY -->
-<div id="tab-scoreboard" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:60px;pointer-events:none">
+<div id="tab-scoreboard" onclick="if(event.target === this) closeTabScoreboard()" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);flex-direction:column;align-items:center;justify-content:flex-start;padding-top:60px;pointer-events:auto">
   <div style="background:rgba(10,30,10,0.95);border:2px solid rgba(100,200,50,0.4);border-radius:16px;padding:16px 24px;min-width:340px;max-width:500px;width:90%">
     <div style="text-align:center;font-size:15px;font-weight:900;color:#8ddc52;letter-spacing:2px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px">🏆 SKOR TABLOSU <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,.3)">[TAB]</span></div>
     <div id="tab-sb-rows" style="display:flex;flex-direction:column;gap:4px"></div>
@@ -2325,7 +2326,7 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
 </div>
 
 <!-- QUICK CHAT WHEEL -->
-<div id="quick-chat-wheel" style="display:none;position:fixed;z-index:750;pointer-events:none">
+<div id="quick-chat-wheel" style="display:none;position:fixed;z-index:750;pointer-events:auto;touch-action:none">
   <svg id="qcw-svg" width="200" height="200" style="position:absolute;left:-100px;top:-100px;pointer-events:none">
     <circle cx="100" cy="100" r="90" fill="rgba(0,0,0,0.7)" stroke="rgba(100,200,50,0.5)" stroke-width="2"/>
   </svg>
@@ -4720,6 +4721,10 @@ function openTabScoreboard() {
       <span style="color:#ffd700;font-weight:800">${scStr}</span>
     </div>`;
   }).join('');
+}
+function toggleTabScoreboard() {
+  if (_tabOpen) closeTabScoreboard();
+  else openTabScoreboard();
 }
 function closeTabScoreboard() {
   _tabOpen = false;
