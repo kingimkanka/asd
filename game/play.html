@@ -5414,7 +5414,7 @@ let _pendingNameTags = [];
 let _ping = 0;
 let _pingTimer = 0;
 let _stateTimer = 0;
-let _lastEmitX = 0, _lastEmitY = 0, _lastEmitAngle = 0, _lastEmitHp = 100, _lastEmitScore = 0;
+let _lastEmitX = 0, _lastEmitY = 0, _lastEmitAngle = 0, _lastEmitHp = 100, _lastEmitScore = 0, _lastEmitAttacking = false;
 let _lastEmitVx = 0, _lastEmitVy = 0; // ② velocity change detection for delta emit
 let _chatInput = null;
 let _isDying = false; // guard against double-die (pvp_hit + pvp_killed race)
@@ -14890,6 +14890,8 @@ function initMultiplayer() {
         if (s.mhp  !== undefined) existing.maxHp       = s.mhp;
         if (s.w    !== undefined) existing.weapon      = s.w;
         if (s.atk  !== undefined) existing.isAttacking = s.atk;
+        if (s.atp  !== undefined) existing.attackTimer = s.atp;
+        if (s.atd  !== undefined) existing.attackDuration = s.atd;
         if (s.k    !== undefined) existing.kills       = s.k;
         if (s.xp   !== undefined) existing.xp          = s.xp;
         if (s.sk   !== undefined) existing.skin        = s.sk;
@@ -14911,7 +14913,7 @@ function initMultiplayer() {
         // First time seeing this player via broadcast — init render pos immediately
         const p = {
           name: s.n, skin: s.sk, x: sx, y: sy, angle: sa,
-          hp: s.hp, maxHp: s.mhp, weapon: s.w, isAttacking: s.atk,
+          hp: s.hp, maxHp: s.mhp, weapon: s.w, isAttacking: s.atk, attackTimer: s.atp || 0, attackDuration: s.atd || 0,
           kills: s.k, xp: s.xp, gold: s.g || 0, score: s.sc || 0, axeTier: s.at || 0, swordTier: s.st || 0,
           rankId: s.rk ?? 0, clanId: s.clanId || '', clanTag: s.clanTag || '',
           acc: s.acc || {},
@@ -14936,7 +14938,7 @@ function initMultiplayer() {
       name: _pjS.n || _pjS.name || '?', skin: _pjS.sk || _pjS.skin || 'default',
       x: _pjS.x ?? 0, y: _pjS.y ?? 0, angle: _pjS.a ?? _pjS.angle ?? 0,
       vx: _pjS.vx || 0, vy: _pjS.vy || 0,
-      hp: _pjS.hp ?? 100, maxHp: _pjS.mhp ?? _pjS.maxHp ?? 100,
+      hp: _pjS.hp ?? 100, maxHp: _pjS.mhp ?? _pjS.maxHp ?? 100, attackTimer: _pjS.atp ?? 0, attackDuration: _pjS.atd ?? 0,
       weapon: _pjS.w ?? _pjS.weapon ?? 1, isAttacking: _pjS.atk ?? false,
       kills: _pjS.k ?? 0, xp: _pjS.xp ?? 0, gold: _pjS.g ?? 0, score: _pjS.sc ?? 0,
       axeTier: _pjS.at ?? 0, swordTier: _pjS.st ?? 0,
@@ -16002,9 +16004,10 @@ function _mpUpdate() {
     // ② Also trigger if velocity changed significantly (catches initial movement)
     const dvx = Math.abs((player.vx||0) - (_lastEmitVx||0));
     const dvy = Math.abs((player.vy||0) - (_lastEmitVy||0));
-    if (dx > 0.4 || dy > 0.4 || da > 0.006 || dhp > 0.5 || dsc >= 10 || dvx > 0.4 || dvy > 0.4 || player.isAttacking || player.weapon >= 3) {
+    if (dx > 0.4 || dy > 0.4 || da > 0.006 || dhp > 0.5 || dsc >= 10 || dvx > 0.4 || dvy > 0.4 || player.isAttacking || player.isAttacking !== _lastEmitAttacking || player.weapon >= 3) {
       _lastEmitX = player.x; _lastEmitY = player.y;
       _lastEmitAngle = player.angle; _lastEmitHp = player.hp; _lastEmitScore = player.score || 0;
+      _lastEmitAttacking = player.isAttacking;
       _lastEmitVx = player.vx || 0; _lastEmitVy = player.vy || 0;
       // ⑤ CSP: record predicted position + increment seq
       const _curSeq = ++_mpSeq;
@@ -16022,7 +16025,7 @@ function _mpUpdate() {
         x: player.x, y: player.y, angle: player.angle,
         vx: player.vx || 0, vy: player.vy || 0,
         hp: player.hp, maxHp: player.maxHp,
-        weapon: player.weapon, isAttacking: player.isAttacking,
+        weapon: player.weapon, isAttacking: player.isAttacking, attackTimer: player.attackTimer, attackDuration: player.attackDuration,
         kills: player.kills, xp: player.xp, gold: player.gold || 0,
         wood: player.wood || 0, stone: player.stone || 0, apples: player.apples || 0,
         sc: player.score || 0,
@@ -16143,8 +16146,14 @@ function drawOtherPlayers() {
       {
         let swAng = 0;
         if (p.isAttacking) {
-          if (p.weapon >= 3) swAng = Math.sin(globalTime * 0.22) * 0.2;
-          else               swAng = Math.sin(globalTime * 0.18) * (Math.PI / 1.8);
+          const prog = p.attackDuration > 0 ? Math.max(0, Math.min(1, p.attackTimer / p.attackDuration)) : 0;
+          if (p.weapon >= 3) {
+            swAng = Math.sin(prog * Math.PI) * 0.2;
+          } else {
+            const peakT = p.weapon === 2 ? 0.38 : 0.28;
+            const remap = prog < peakT ? prog / peakT : 1 - (prog - peakT) / (1 - peakT);
+            swAng = Math.sin(remap * Math.PI * 0.5) * (p.weapon === 2 ? (Math.PI / 1.2) : (Math.PI / 1.5));
+          }
         }
         ctx.save(); ctx.rotate(swAng);
 
@@ -16164,10 +16173,12 @@ function drawOtherPlayers() {
         const armCol = SKIN_ARM_COLORS[p.skin] || '#c4966a';
         for (let _pai = 0; _pai < 2; _pai++) {
           const ay = _pai === 0 ? -13 : 20, sign = _pai === 0 ? -1 : 1;
-          ctx.save(); ctx.translate(30, ay);
+          const armX = p.weapon === 2 ? 38 : 30;
+          const armY = ay - (p.weapon === 2 ? 2 : 0);
+          ctx.save(); ctx.translate(armX, armY);
           ctx.fillStyle = armCol;
           ctx.strokeStyle = '#000'; ctx.lineWidth = 4.5;
-          ctx.beginPath(); ctx.ellipse(6,0,18,13,0.18*sign,0,Math.PI*2); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(8,0,18,13,0.12*sign,0,Math.PI*2); ctx.fill(); ctx.stroke();
           if (_qualityLevel >= 1) {
             ctx.fillStyle = 'rgba(255,255,255,0.22)';
             ctx.beginPath(); ctx.ellipse(2,-3*sign,7,4,0.2*sign,0,Math.PI*2); ctx.fill();
