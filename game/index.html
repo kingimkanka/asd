@@ -12,7 +12,7 @@
     </script>
     <meta name="google-site-verification" content="5HPW5h_jP5UFmpzrVQDBf94viuUajdObUgtm0JNoi5g">
     <meta name="google-site-verification" content="google36f814981b2cabaa">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
     <meta name="description" content="ForestBrawl.io: Vahşi ormanda kaynak topla, üs kur, yaratıkları alt et ve rakip savaşçılarla gerçek zamanlı arenada hayatta kal.">
     <meta name="keywords" content="ForestBrawl.io, Taming.io tarzı oyun, online hayatta kalma oyunu, multiplayer io oyunu, tarayıcı savaş oyunu">
     <meta name="author" content="ForestBrawl Team">
@@ -63,6 +63,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preload" href="players/wolf.png" as="image">
     <title>ForestBrawl.io - Çevrimiçi Hayatta Kalma Oyunu</title>
 
     <!-- Tailwind CSS, Fonts & Icons -->
@@ -2018,6 +2019,8 @@
                 imgWrap.className = 'w-14 h-14 my-1 flex items-center justify-center relative';
                 const img = document.createElement('img');
                 img.src = item.img;
+                img.loading = 'lazy';
+                img.decoding = 'async';
                 img.className = `max-w-full max-h-full object-contain drop-shadow-md ${!owned ? 'grayscale-[50%] brightness-75' : ''}`;
                 img.alt = item.name;
                 imgWrap.appendChild(img);
@@ -2193,6 +2196,8 @@
                 imgWrap.className = 'w-14 h-14 my-1 flex items-center justify-center relative';
                 const img = document.createElement('img');
                 img.src = item.img;
+                img.loading = 'lazy';
+                img.decoding = 'async';
                 img.className = 'max-w-full max-h-full object-contain drop-shadow-md';
                 img.alt = item.name;
                 imgWrap.appendChild(img);

@@ -52,7 +52,7 @@
   window.addEventListener('load', hideLoad);
 })();
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -69,6 +69,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preload" href="asset/tree-forest.png" as="image">
 <script src="platform.js" defer></script>
 <title>ForestBrawl.io - Oyna</title>
 <style>
@@ -458,7 +459,7 @@ html.touch-device .joy-zone { display:flex !important; pointer-events:auto !impo
 #entry-consent-actions{display:flex;gap:10px;justify-content:center;}
 .entry-consent-btn{flex:1;min-height:44px;border:0;border-radius:10px;font-weight:900;font-size:14px;font-family:inherit;cursor:pointer;touch-action:manipulation;}
 #entry-consent-accept{background:#79d138;color:#102008;box-shadow:0 4px 0 #4a8c1c;}
-#entry-consent-reject{background:#d94838;color:#fff;box-shadow:0 4px 0 #91271b;}
+#entry-consent-reject{background:#c6322a;color:#fff;box-shadow:0 4px 0 #8f211b;}
 #joy-left .joy-base,
 #joy-right .joy-base{
   position:absolute;top:50%;left:50%;width:104px;height:104px;transform:translate(-50%,-50%);

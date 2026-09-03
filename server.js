@@ -799,6 +799,7 @@ function serveStatic(request, response, requestPath) {
     }
     const extension = path.extname(filePath).toLowerCase();
     const isHtmlOrCode = ['.html', '.js', '.css'].includes(extension);
+    const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(extension);
     response.writeHead(200, {
       'Content-Type': mime[extension] || 'application/octet-stream',
       'X-Content-Type-Options': 'nosniff',
@@ -807,7 +808,7 @@ function serveStatic(request, response, requestPath) {
       'Cross-Origin-Resource-Policy': 'same-origin',
       'X-DNS-Prefetch-Control': 'on',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-      'Cache-Control': isHtmlOrCode ? 'no-cache' : 'public, max-age=86400',
+      'Cache-Control': isHtmlOrCode ? 'no-cache' : isImage ? 'public, max-age=604800, immutable' : 'public, max-age=86400',
     });
     response.end(data);
   });
