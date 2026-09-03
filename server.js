@@ -172,6 +172,7 @@ function loadAccountData() {
           equippedItems: (u.equippedItems && typeof u.equippedItems === 'object') ? { ...u.equippedItems } : {},
           questProgress: (u.questProgress && typeof u.questProgress === 'object') ? { ...u.questProgress } : {},
           claimedQuests: Array.isArray(u.claimedQuests) ? [...new Set(u.claimedQuests)] : [],
+          settings: (u.settings && typeof u.settings === 'object') ? { ...u.settings } : {},
           createdAt: u.createdAt || Date.now(),
           lastLoginAt: u.lastLoginAt || Date.now()
         };
@@ -276,6 +277,7 @@ function publicUser(user) {
     xpToNextRank: rInfo.xpToNextRank,
     ownedItems: user.ownedItems || [],
     equippedItems: user.equippedItems || {},
+    settings: user.settings || {},
     coins: user.coins ?? 1500,
     gold: user.coins ?? 1500,
     questProgress: user.questProgress || {},
@@ -520,6 +522,7 @@ async function handleApi(request, response, requestPath) {
       gold: initCoins,
       ownedItems: Array.isArray(body.initialOwnedItems) ? [...new Set(body.initialOwnedItems)] : [],
       equippedItems: (body.initialEquippedItems && typeof body.initialEquippedItems === 'object') ? { ...body.initialEquippedItems } : {},
+      settings: (body.initialSettings && typeof body.initialSettings === 'object') ? { ...body.initialSettings } : {},
       createdAt: Date.now(),
       lastLoginAt: Date.now()
     };
@@ -584,6 +587,32 @@ async function handleApi(request, response, requestPath) {
     } else {
       sendJson(response, 200, profileResponse(user));
     }
+    return true;
+  }
+  if (requestPath === '/api/profile/state' && request.method === 'POST') {
+    if (!user) {
+      sendJson(response, 401, { error: 'Oturum gerekli.' });
+      return true;
+    }
+    if (body.settings && typeof body.settings === 'object') {
+      user.settings = { ...(user.settings || {}) };
+      for (const [key, value] of Object.entries(body.settings).slice(0, 50)) {
+        if (/^[a-zA-Z0-9_-]{1,64}$/.test(key) && (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string')) {
+          user.settings[key] = value;
+        }
+      }
+    }
+    if (Array.isArray(body.ownedItems)) user.ownedItems = [...new Set([...(user.ownedItems || []), ...body.ownedItems.map(String)])];
+    if (body.equippedItems && typeof body.equippedItems === 'object') user.equippedItems = { ...(user.equippedItems || {}), ...body.equippedItems };
+    if (body.questProgress && typeof body.questProgress === 'object') {
+      user.questProgress = user.questProgress || {};
+      for (const quest of QUESTS_LIST) {
+        const delta = Math.max(0, Math.min(1000000, Number(body.questProgress[quest.key]) || 0));
+        if (delta) user.questProgress[quest.key] = (Number(user.questProgress[quest.key]) || 0) + delta;
+      }
+    }
+    saveAccountData(true);
+    sendJson(response, 200, { ok: true, user: publicUser(user) });
     return true;
   }
   if (requestPath === '/api/profile/xp' && request.method === 'POST') {

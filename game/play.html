@@ -707,7 +707,7 @@ html.touch-device .joy-zone { display:flex !important; pointer-events:auto !impo
   }
   #resource-hud{max-width:calc(100vw - 16px);overflow:hidden !important;}
   .res-item{min-width:0;flex:1;padding:3px 5px;gap:3px;}
-  #fps-display,#ping-display{display:none !important;}
+  #fps-display,#ping-display{display:inline-flex !important;}
   #minimap{
     top:max(env(safe-area-inset-top,0px),8px);
     right:max(env(safe-area-inset-right,0px),8px);
@@ -2839,10 +2839,64 @@ function _trackQuestProgress(key, amount = 1) {
   if (!normalizedKey || !Number.isFinite(Number(amount))) return;
   try {
     const progress = JSON.parse(localStorage.getItem('fb_quest_prog') || '{}');
-    progress[normalizedKey] = Math.max(0, Number(progress[normalizedKey] || 0) + Number(amount));
+    const delta = Math.max(0, Number(amount));
+    progress[normalizedKey] = Math.max(0, Number(progress[normalizedKey] || 0) + delta);
     localStorage.setItem('fb_quest_prog', JSON.stringify(progress));
+    _questPending[normalizedKey] = (_questPending[normalizedKey] || 0) + delta;
+    _scheduleQuestSync();
   } catch (error) {}
 }
+const _questPending = {};
+const _questPersisted = {};
+let _questSyncTimer = null;
+function _accountStatePayload() {
+  const settings = {};
+  ['fb_auto_eat', 'fb_build_snap', 'fb_shake', 'fb_mobile_controls', 'fb_sfx_muted', 'fb_shadows', 'fb_fps', 'fb_minimap', 'fb_grid_show'].forEach(key => {
+    const value = localStorage.getItem(key);
+    if (value !== null) settings[key] = value === 'true' ? true : value === 'false' ? false : value;
+  });
+  return { questProgress: { ..._questPending }, settings };
+}
+function _scheduleQuestSync() {
+  if (!localStorage.getItem('fb_auth_token') || _questSyncTimer) return;
+  _questSyncTimer = setTimeout(() => { _questSyncTimer = null; _syncGameAccountState(); }, 900);
+}
+function _syncGameAccountState(keepalive = false) {
+  const token = localStorage.getItem('fb_auth_token') || '';
+  const pending = { ..._questPending };
+  if (!token || (!Object.keys(pending).length && !keepalive)) return Promise.resolve(null);
+  Object.entries(pending).forEach(([key, value]) => {
+    _questPending[key] = Math.max(0, (_questPending[key] || 0) - value);
+    _questPersisted[key] = (_questPersisted[key] || 0) + value;
+  });
+  return fetch('/api/profile/state', {
+    method: 'POST',
+    keepalive,
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ..._accountStatePayload(), questProgress: pending })
+  }).then(response => response.ok ? response.json() : null).then(data => {
+    if (!data?.user) {
+      Object.entries(pending).forEach(([key, value]) => {
+        _questPending[key] = (_questPending[key] || 0) + value;
+        _questPersisted[key] = Math.max(0, (_questPersisted[key] || 0) - value);
+      });
+      return data;
+    }
+    localStorage.setItem('fb_auth_user', JSON.stringify(data.user));
+    return data;
+  }).catch(() => null);
+}
+function _saveGameSetting(key, value) {
+  localStorage.setItem(key, value ? 'true' : 'false');
+  const token = localStorage.getItem('fb_auth_token') || '';
+  if (!token) return;
+  fetch('/api/profile/state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ settings: { [key]: !!value } })
+  }).catch(() => {});
+}
+window.addEventListener('pagehide', () => { _syncGameAccountState(true); });
 window._updateQuestProgress = _trackQuestProgress;
 window._showAchPopup = function(){};
 
@@ -4447,6 +4501,7 @@ let _sessionQuestStats = { wolves: 0, bears: 0, scorpions: 0, spiders: 0, kills:
 function _incQuestStat(k, n = 1) {
   if (k && _sessionQuestStats) {
     _sessionQuestStats[k] = (_sessionQuestStats[k] || 0) + n;
+    _trackQuestProgress(k, n);
   }
 }
 const CHEST_COLLECT_RADIUS = 46;
@@ -5773,33 +5828,33 @@ function _onGridToggle(checked) {
   const mmr = document.getElementById('mm-row-labels');
   if (mm) mm.style.display = checked ? 'flex' : 'none';
   if (mmr) mmr.style.display = checked ? 'flex' : 'none';
-  localStorage.setItem('fb_grid_show', checked ? 'true' : 'false');
+  _saveGameSetting('fb_grid_show', checked);
 }
 
 let _sfxMuted = localStorage.getItem('fb_sfx_muted') === 'true';
 function _onSfxToggle(checked) {
   _sfxMuted = !checked;
-  localStorage.setItem('fb_sfx_muted', _sfxMuted ? 'true' : 'false');
+  _saveGameSetting('fb_sfx_muted', _sfxMuted);
 }
 
 function _onAutoEatToggle(checked) {
   _autoEatEnabled = checked;
-  localStorage.setItem('fb_auto_eat', checked ? 'true' : 'false');
+  _saveGameSetting('fb_auto_eat', checked);
 }
 function _onShakeToggle(checked) {
   _shakeEnabled = checked;
-  localStorage.setItem('fb_shake', checked ? 'true' : 'false');
+  _saveGameSetting('fb_shake', checked);
   if (!checked) shakeMag = 0;
 }
 function _onMinimapToggle(checked) {
   const minimap = document.getElementById('minimap');
   if (minimap) minimap.style.display = checked ? '' : 'none';
-  localStorage.setItem('fb_minimap', checked ? 'true' : 'false');
+  _saveGameSetting('fb_minimap', checked);
 }
 function _onFpsToggle(checked) {
   const fpsElement = document.getElementById('fps-display');
   if (fpsElement) fpsElement.style.display = checked ? '' : 'none';
-  localStorage.setItem('fb_fps', checked ? 'true' : 'false');
+  _saveGameSetting('fb_fps', checked);
 }
 
 function _initGameSettingsUI() {
@@ -8449,6 +8504,7 @@ function tryFullscreen() {
 
 function _goToMenu() {
   _submitScore();
+  if (typeof _syncGameAccountState === 'function') _syncGameAccountState(true);
   setTimeout(() => { window.location.href = _BASE; }, 120);
 }
 
@@ -8557,16 +8613,16 @@ function die() {
       coins: player.gold,
       gold: player.gold,
       questProgress: {
-        wolves: _sessionQuestStats.wolves || 0,
-        bears: _sessionQuestStats.bears || 0,
-        scorpions: _sessionQuestStats.scorpions || 0,
-        spiders: _sessionQuestStats.spiders || 0,
-        kills: player.kills || 0,
-        kingKills: _sessionQuestStats.kingKills || 0,
-        airdrops: _sessionQuestStats.airdrops || 0,
-        buildings: _sessionQuestStats.buildings || 0,
-        wood: _sessionQuestStats.wood || 0,
-        gold: player.gold || 0
+        wolves: Math.max(0, (_sessionQuestStats.wolves || 0) - (_questPersisted.wolves || 0)),
+        bears: Math.max(0, (_sessionQuestStats.bears || 0) - (_questPersisted.bears || 0)),
+        scorpions: Math.max(0, (_sessionQuestStats.scorpions || 0) - (_questPersisted.scorpions || 0)),
+        spiders: Math.max(0, (_sessionQuestStats.spiders || 0) - (_questPersisted.spiders || 0)),
+        kills: Math.max(0, (player.kills || 0) - (_questPersisted.kills || 0)),
+        kingKills: Math.max(0, (_sessionQuestStats.kingKills || 0) - (_questPersisted.kingKills || 0)),
+        airdrops: Math.max(0, (_sessionQuestStats.airdrops || 0) - (_questPersisted.airdrops || 0)),
+        buildings: Math.max(0, (_sessionQuestStats.buildings || 0) - (_questPersisted.buildings || 0)),
+        wood: Math.max(0, (_sessionQuestStats.wood || 0) - (_questPersisted.wood || 0)),
+        gold: Math.max(0, (player.gold || 0) - (_questPersisted.gold || 0))
       }
     }),
   }).then(r => {
