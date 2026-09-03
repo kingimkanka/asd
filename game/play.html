@@ -1851,7 +1851,7 @@ html.touch-device .joy-zone { display:flex !important; pointer-events:auto !impo
   #joy-left,#joy-right{bottom:48px;}
   #joy-left .joy-base,#joy-right .joy-base{width:64px;height:64px;}
   #joy-left .joy-stick,#joy-right .joy-stick{width:24px;height:24px;}
-  #minimap{display:none;}
+  #minimap{display:block !important;}
   #ref-player-panel{display:none;}
 }
 /* Death result: compact forest HUD, with real player and weapon assets. */
@@ -1976,7 +1976,7 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
   <div style="display:flex;gap:6px;pointer-events:auto;align-items:center;">
     <button type="button" class="ref-hud-btn" onclick="_toggleSnapSettings(event)" title="Savunma ayarları" aria-label="Savunma ayarları">🛡</button>
     <button type="button" id="scoreboard-btn" class="ref-hud-btn" onclick="toggleTabScoreboard()" title="Skor tablosu" aria-label="Skor tablosu">⚔</button>
-    <button type="button" id="chat-wheel-btn" class="ref-hud-btn" onclick="openQuickChat(window.innerWidth / 2, window.innerHeight / 2)" title="Hızlı sohbet" aria-label="Hızlı sohbet">✋</button>
+    <button type="button" id="chat-wheel-btn" class="ref-hud-btn" onclick="toggleQuickChat()" title="Hızlı sohbet" aria-label="Hızlı sohbet">✋</button>
     <button type="button" id="settings-btn" title="Ayarlar">⚙️</button>
     <button id="fs-btn" onclick="tryFullscreen()" title="Tam Ekran">⛶</button>
     <button id="back-btn" onclick="_goToMenu()">← Menü</button>
@@ -2319,7 +2319,8 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
 
 <!-- TAB SCOREBOARD OVERLAY -->
 <div id="tab-scoreboard" onclick="if(event.target === this) closeTabScoreboard()" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);flex-direction:column;align-items:center;justify-content:flex-start;padding-top:60px;pointer-events:auto">
-  <div style="background:rgba(10,30,10,0.95);border:2px solid rgba(100,200,50,0.4);border-radius:16px;padding:16px 24px;min-width:340px;max-width:500px;width:90%">
+  <div style="position:relative;background:rgba(10,30,10,0.95);border:2px solid rgba(100,200,50,0.4);border-radius:16px;padding:16px 24px;min-width:340px;max-width:500px;width:90%">
+    <button type="button" onclick="closeTabScoreboard()" aria-label="Skor tablosunu kapat" title="Kapat" style="position:absolute;top:8px;right:10px;width:28px;height:28px;border:0;border-radius:6px;background:rgba(255,255,255,.12);color:#fff;font-size:18px;line-height:1;cursor:pointer">×</button>
     <div style="text-align:center;font-size:15px;font-weight:900;color:#8ddc52;letter-spacing:2px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:8px">🏆 SKOR TABLOSU <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,.3)">[TAB]</span></div>
     <div id="tab-sb-rows" style="display:flex;flex-direction:column;gap:4px"></div>
   </div>
@@ -2331,6 +2332,7 @@ function drawSkinEyesOverlay(c, R, sk, fl) {
     <circle cx="100" cy="100" r="90" fill="rgba(0,0,0,0.7)" stroke="rgba(100,200,50,0.5)" stroke-width="2"/>
   </svg>
   <div id="qcw-items" style="position:absolute;left:-100px;top:-100px;width:200px;height:200px"></div>
+  <button type="button" id="qcw-close" onclick="closeQuickChat()" aria-label="Emoji panelini kapat" title="Kapat" style="position:absolute;left:-20px;top:-20px;width:40px;height:40px;border:2px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(25,25,25,.92);color:#fff;font-size:22px;line-height:1;cursor:pointer;pointer-events:auto">×</button>
 </div>
 
 <!-- MINIMAP — below the resource counter -->
@@ -4775,6 +4777,11 @@ function openQuickChat(mx, my) {
     items.appendChild(div);
   });
   wheel.style.pointerEvents = 'auto';
+}
+
+function toggleQuickChat() {
+  if (_qcwOpen) closeQuickChat();
+  else openQuickChat(window.innerWidth / 2, window.innerHeight / 2);
 }
 
 function closeQuickChat() {
