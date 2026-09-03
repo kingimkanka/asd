@@ -16343,7 +16343,7 @@ function drawOtherPlayers() {
       ctx.save();
       try {
         ctx.globalAlpha = 0.45;
-        drawBuilding({ x: gbx, y: gby, type: p.weapon, angle: p.angle, life: 0, hp: 100, maxHp: 100, shake: 0, hitTimer: 0 });
+        drawBuilding({ x: gbx, y: gby, type: p.weapon, angle: p.angle, life: 0, hp: 100, maxHp: 100, shake: 0, hitTimer: 0 }, true);
         ctx.globalAlpha = 0.92;
         const _typeLabel3 = {3:'🗡️ Kazık (Spikes)',4:'💨 Değirmen (Windmill)',5:'⚡ Hız Pedi (Boost)',6:'🪤 Ayı Tuzağı (Bear Trap)',7:'🔫 Taret (Turret)',8:'🚪 Kapı/Duvar (Door)',9:'💚 Şifa Pedi (Heal Pad)',10:'🔥 Kamp Ateşi'}[p.weapon] || '🏗️ Yapı';
         ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
