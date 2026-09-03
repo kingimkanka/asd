@@ -2265,25 +2265,39 @@
             }
         }
 
-        function buyShopItem(id, cat, cost) {
+        async function buyShopItem(id, cat, cost) {
             const gold = getPlayerGold();
             if (gold < cost) {
                 triggerToast('Yetersiz altın! Oyun oynayarak kazan.', 'fa-coins');
                 return;
             }
-            const owned = getOwnedItems();
-            if (!owned.includes(id)) {
-                owned.push(id);
-                localStorage.setItem('fb_acc_owned', JSON.stringify(owned));
-            }
-            setPlayerGold(gold - cost);
 
             if (_authToken) {
-                fetch('/api/shop/buy', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
-                    body: JSON.stringify({ itemId: id, cost: cost })
-                }).catch(() => {});
+                try {
+                    const response = await fetch('/api/shop/buy', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+                        body: JSON.stringify({ itemId: id, cost: cost })
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        triggerToast(data.error || 'Satın alma tamamlanamadı.', 'fa-triangle-exclamation');
+                        return;
+                    }
+                    const serverOwned = normalizeOwnedItems(data.ownedItems);
+                    localStorage.setItem('fb_acc_owned', JSON.stringify(serverOwned));
+                    if (typeof data.newCoins === 'number') setPlayerGold(data.newCoins);
+                    _authUser = { ...(_authUser || {}), ownedItems: serverOwned, coins: data.newCoins, gold: data.newCoins };
+                    localStorage.setItem('fb_auth_user', JSON.stringify(_authUser));
+                } catch (error) {
+                    triggerToast('Sunucu bağlantısı kurulamadı; satın alma yapılmadı.', 'fa-triangle-exclamation');
+                    return;
+                }
+            } else {
+                const owned = getOwnedItems();
+                if (!owned.includes(id)) owned.push(id);
+                localStorage.setItem('fb_acc_owned', JSON.stringify(owned));
+                setPlayerGold(gold - cost);
             }
 
             equipCosmeticItem(id, cat);
